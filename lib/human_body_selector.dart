@@ -9,6 +9,8 @@ class HumanBodySelector extends StatefulWidget {
   final double? width;
   final double? height;
   final String map;
+  final String? gender;
+  final String? side;
   final Function(List<BodyPart> city, BodyPart? active) onChanged;
   final Function(List<BodyPart> city) onLevelChanged;
   final List<String>? initialSelectedPartsList;
@@ -27,6 +29,8 @@ class HumanBodySelector extends StatefulWidget {
     required this.map,
     required this.onChanged,
     required this.onLevelChanged,
+    this.gender,
+    this.side,
     this.width,
     this.height,
     this.strokeColor,
@@ -61,8 +65,8 @@ class SelectableSvgState extends State<HumanBodySelector> {
       Color(0xffe72526),
     ],
   );
-  final List<BodyPart> _partsList = [];
-  final List<BodyPart> selectedPartsList = [];
+  List<BodyPart> _partsList = [];
+  List<BodyPart> selectedPartsList = [];
 
   final _sizeController = SizeController.instance;
   Size? mapSize;
@@ -71,21 +75,94 @@ class SelectableSvgState extends State<HumanBodySelector> {
 
   late List<BodyPart> frontPartsList;
   late List<BodyPart> backPartsList;
+  late List<BodyPart> sidePartsList;
+
+  void didUpdateWidget(oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.map != oldWidget.map) {
+      setState(() {
+        _partsList.clear();
+        selectedPartsList.clear();
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          if(widget.gender == 'Male'){
+            frontPartsList = await Parser.instance.svgToCityList(Maps.MaleFrontBody);
+            backPartsList = await Parser.instance.svgToCityList(Maps.MaleBackBody);
+            sidePartsList = await Parser.instance.svgToCityList(Maps.MaleSideBody);
+          }
+          if(widget.gender == 'Female'){
+            frontPartsList = await Parser.instance.svgToCityList(Maps.FemaleFrontBody);
+            backPartsList = await Parser.instance.svgToCityList(Maps.FemaleBackBody);
+            sidePartsList = await Parser.instance.svgToCityList(Maps.FemaleSideBody);
+          }
+          if(widget.gender == 'Child'){
+            frontPartsList = await Parser.instance.svgToCityList(Maps.ChildFrontBody);
+            backPartsList = await Parser.instance.svgToCityList(Maps.ChildBackBody);
+            sidePartsList = await Parser.instance.svgToCityList(Maps.ChildSideBody);
+          }
+          await loadCityList();
+          if (widget.initialSelectedPartsList != null && selectedPartsList.isEmpty) {
+            for (var i = 0; i < widget.initialSelectedPartsList!.length; i++) {
+              final initialPart = widget.initialSelectedPartsList![i];
+              frontPartsList.forEach((element) {
+                if (element.title == initialPart) {
+                  if (widget.initialPainLevels != null &&
+                      widget.initialPainLevels!.length > i) {
+                    element.painLevel =
+                        int.tryParse(widget.initialPainLevels![i]) ?? 0;
+                  }
+                  selectedPartsList.add(element);
+                }
+              });
+              backPartsList.forEach((element) {
+                if (element.title == initialPart) {
+                  if (widget.initialPainLevels != null &&
+                      widget.initialPainLevels!.length > i) {
+                    element.painLevel =
+                        int.tryParse(widget.initialPainLevels![i]) ?? 0;
+                  }
+                  selectedPartsList.add(element);
+                }
+              });
+              sidePartsList.forEach((element) {
+                if (element.title == initialPart) {
+                  if (widget.initialPainLevels != null &&
+                      widget.initialPainLevels!.length > i) {
+                    element.painLevel =
+                        int.tryParse(widget.initialPainLevels![i]) ?? 0;
+                  }
+                  selectedPartsList.add(element);
+                }
+              });
+            }
+          }
+        });
+        widget.repaint?.addListener(rePaintSvg);
+      });
+    }
+  }
 
   @override
   void initState() {
     super.initState();
-    final isFemale = widget.map == Maps.HUMAN || widget.map == Maps.HUMAN1;
-    WidgetsBinding.instance!.addPostFrameCallback((_) async {
-      frontPartsList = isFemale
-          ? await Parser.instance.svgToCityList(Maps.HUMAN)
-          : await Parser.instance.svgToCityList(Maps.MALE);
-      backPartsList = isFemale
-          ? await Parser.instance.svgToCityList(Maps.HUMAN1)
-          : await Parser.instance.svgToCityList(Maps.MALE1);
+    //final isFemale = widget.map == Maps.HUMAN || widget.map == Maps.HUMAN1;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if(widget.gender == 'Male'){
+        frontPartsList = await Parser.instance.svgToCityList(Maps.MaleFrontBody);
+        backPartsList = await Parser.instance.svgToCityList(Maps.MaleBackBody);
+        sidePartsList = await Parser.instance.svgToCityList(Maps.MaleSideBody);
+      }
+      if(widget.gender == 'Female'){
+        frontPartsList = await Parser.instance.svgToCityList(Maps.FemaleFrontBody);
+        backPartsList = await Parser.instance.svgToCityList(Maps.FemaleBackBody);
+        sidePartsList = await Parser.instance.svgToCityList(Maps.FemaleSideBody);
+      }
+      if(widget.gender == 'Child'){
+        frontPartsList = await Parser.instance.svgToCityList(Maps.ChildFrontBody);
+        backPartsList = await Parser.instance.svgToCityList(Maps.ChildBackBody);
+        sidePartsList = await Parser.instance.svgToCityList(Maps.ChildSideBody);
+      }
       await loadCityList();
-      if (widget.initialSelectedPartsList != null &&
-          selectedPartsList.isEmpty) {
+      if (widget.initialSelectedPartsList != null && selectedPartsList.isEmpty) {
         for (var i = 0; i < widget.initialSelectedPartsList!.length; i++) {
           final initialPart = widget.initialSelectedPartsList![i];
           frontPartsList.forEach((element) {
@@ -99,6 +176,16 @@ class SelectableSvgState extends State<HumanBodySelector> {
             }
           });
           backPartsList.forEach((element) {
+            if (element.title == initialPart) {
+              if (widget.initialPainLevels != null &&
+                  widget.initialPainLevels!.length > i) {
+                element.painLevel =
+                    int.tryParse(widget.initialPainLevels![i]) ?? 0;
+              }
+              selectedPartsList.add(element);
+            }
+          });
+          sidePartsList.forEach((element) {
             if (element.title == initialPart) {
               if (widget.initialPainLevels != null &&
                   widget.initialPainLevels!.length > i) {
@@ -127,9 +214,15 @@ class SelectableSvgState extends State<HumanBodySelector> {
   loadCityList() async {
     _partsList.clear();
     setState(() {
-      _partsList.addAll((widget.map == Maps.HUMAN || widget.map == Maps.MALE)
-          ? frontPartsList
-          : backPartsList);
+      if(widget.side == 'Front'){
+        _partsList.addAll(frontPartsList);
+      }
+      if(widget.side == 'Back'){
+        _partsList.addAll(backPartsList);
+      }
+      if(widget.side == 'Side'){
+        _partsList.addAll(sidePartsList);
+      }
       if (selectedPartsList.isNotEmpty) {
         selectedPartsList.forEach((element) {
           final rem1 = _partsList.remove(element);
@@ -199,9 +292,8 @@ class SelectableSvgState extends State<HumanBodySelector> {
         child: Container(
           width: widget.width ?? double.infinity,
           height: widget.height ?? double.infinity,
-          constraints: BoxConstraints(
-              maxWidth: mapSize?.width ?? 0, maxHeight: mapSize?.height ?? 0),
-          alignment: Alignment.center,
+          constraints: BoxConstraints(maxWidth: widget?.width ?? 0, maxHeight: widget?.height ?? 0),
+          //alignment: Alignment.center,
           // child: AbsorbPointer(
           //     absorbing: true,
           //     child: widget.child ?? SizedBox.shrink()),
